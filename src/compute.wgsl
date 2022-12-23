@@ -34,7 +34,9 @@ struct ComputationData {
     bend_stiffness: f32,
     //collisions
     sphere_radius: f32,
-    sphere_offset: f32,
+    sphere_position_x: f32,
+    sphere_position_y: f32,
+    sphere_position_z: f32,
 }
 
 @group(0) @binding(0) var<storage, read_write> verticesData: array<Vertex>;
@@ -57,13 +59,18 @@ fn main(@builtin(global_invocation_id) param: vec3<u32>) {
 
     //collision with sphere
     let vertex = vec3<f32>(verticesData[param.x].position_x, verticesData[param.x].position_y, verticesData[param.x].position_z);
+    let sphere = vec3<f32>(data.sphere_position_x, data.sphere_position_y, data.sphere_position_z);
 
-    let vertex_length = length(vertex);
+    let distance_to_center = length(vertex - sphere);
 
-    if (vertex_length < data.sphere_radius) {
+    if (distance_to_center < data.sphere_radius) {
         let normal = normalize(vertex);
-        verticesData[param.x].position_x += normal.x * (data.sphere_radius - vertex_length);
-        verticesData[param.x].position_y += normal.y * (data.sphere_radius - vertex_length);
-        verticesData[param.x].position_z += normal.z * (data.sphere_radius - vertex_length);
+        verticesData[param.x].position_x += normal.x * (data.sphere_radius - distance_to_center);
+        verticesData[param.x].position_y += normal.y * (data.sphere_radius - distance_to_center);
+        verticesData[param.x].position_z += normal.z * (data.sphere_radius - distance_to_center);
+
+        velocitiesData[param.x].velocity_x = 0.0;
+        velocitiesData[param.x].velocity_y = 0.0;
+        velocitiesData[param.x].velocity_z = 0.0;
     }
 }

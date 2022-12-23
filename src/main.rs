@@ -34,7 +34,9 @@ struct ComputeData {
     bend_stiffness: f32,
     //collisions
     sphere_radius: f32,
-    sphere_offset: f32,
+    sphere_position_x: f32,
+    sphere_position_y: f32,
+    sphere_position_z: f32,
 }
 
 // --------   PARAMETERS OF THE SIMULATION   --------
@@ -50,7 +52,9 @@ const SHEAR_STIFFNESS: f32 = 4.0;
 const BEND_STIFFNESS: f32 = 2.0;
 //SPHERE
 const SPHERE_RADIUS: f32 = (CLOTH_WIDTH as f32) / 8.5;
-const SPHERE_OFFSET: f32 = (CLOTH_WIDTH as f32) / 2.0;
+const SPHERE_POSITION_X: f32 = 0.0;
+const SPHERE_POSITION_Y: f32 = 0.0;
+const SPHERE_POSITION_Z: f32 = 0.0;
 // ==================================================
 
 fn create_cloth_mesh(width: u16, altitude: f32) -> (Vec<Vertex>, Vec<u16>, Vec<VertexVelocity>) {       //creates a cloth mesh of vertices of width x width
@@ -164,7 +168,9 @@ impl MyApp {
             bend_stiffness: BEND_STIFFNESS,
             //collisions
             sphere_radius: SPHERE_RADIUS,
-            sphere_offset: SPHERE_OFFSET,
+            sphere_position_x: SPHERE_POSITION_X,
+            sphere_position_y: SPHERE_POSITION_Y,
+            sphere_position_z: SPHERE_POSITION_Z,
         };
 
         let compute_data_buffer = context.create_buffer(&[compute_data], wgpu::BufferUsages::UNIFORM);
@@ -302,7 +308,9 @@ impl Application for MyApp {
             bend_stiffness: BEND_STIFFNESS,
             //collisions
             sphere_radius: SPHERE_RADIUS,
-            sphere_offset: SPHERE_OFFSET,
+            sphere_position_x: SPHERE_POSITION_X,
+            sphere_position_y: SPHERE_POSITION_Y,
+            sphere_position_z: SPHERE_POSITION_Z,
         }; 
         context.update_buffer(&self.compute_data_buffer, &[compute_data]);
 
