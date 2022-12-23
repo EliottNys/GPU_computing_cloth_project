@@ -41,9 +41,9 @@ struct ComputeData {
 // ==================================================
 const GRAVITY: f32 = 9.81;
 //CLOTH
-const CLOTH_WIDTH: u32 = 10;
+const CLOTH_WIDTH: u32 = 20;
 const NB_CLOTH_VERTICES: u32 = CLOTH_WIDTH * CLOTH_WIDTH;
-const CLOTH_VERTEX_MASS: f32 = 5.0;
+const CLOTH_VERTEX_MASS: f32 = 0.05;
 const CLOTH_FALL_HEIGHT: f32 = 3.5;
 const STRUCTURAL_STIFFNESS: f32 = 5.0;
 const SHEAR_STIFFNESS: f32 = 4.0;
@@ -114,7 +114,8 @@ struct MyApp {
 impl MyApp {
     fn new(context: &Context) -> Self {
         let camera = Camera {
-            eye: (1.5 * (CLOTH_WIDTH as f32), 0.0, 0.0).into(),
+            //eye: (1.5 * (CLOTH_WIDTH as f32), 0.0, 0.0).into(),
+            eye: (-1.5 * (CLOTH_WIDTH as f32), 0.0, 0.0).into(),
             target: (0.0, 0.0, 0.0).into(),
             up: cgmath::Vector3::unit_y(),
             aspect: context.get_aspect_ratio(),

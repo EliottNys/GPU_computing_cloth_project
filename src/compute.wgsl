@@ -53,5 +53,17 @@ fn main(@builtin(global_invocation_id) param: vec3<u32>) {
     verticesData[param.x].position_z += velocitiesData[param.x].velocity_z * data.delta_time;
 
     //gravity
-    velocitiesData[param.x].velocity_y -= data.gravity * data.delta_time;
+    velocitiesData[param.x].velocity_y -= data.gravity * data.cloth_vertex_mass* data.delta_time;
+
+    //collision with sphere
+    let vertex = vec3<f32>(verticesData[param.x].position_x, verticesData[param.x].position_y, verticesData[param.x].position_z);
+
+    let vertex_length = length(vertex);
+
+    if (vertex_length < data.sphere_radius) {
+        let normal = normalize(vertex);
+        verticesData[param.x].position_x += normal.x * (data.sphere_radius - vertex_length);
+        verticesData[param.x].position_y += normal.y * (data.sphere_radius - vertex_length);
+        verticesData[param.x].position_z += normal.z * (data.sphere_radius - vertex_length);
+    }
 }
