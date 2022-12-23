@@ -63,14 +63,17 @@ fn main(@builtin(global_invocation_id) param: vec3<u32>) {
 
     let distance_to_center = length(vertex - sphere);
 
-    if (distance_to_center < data.sphere_radius) {
-        let normal = normalize(vertex);
+    if (distance_to_center < data.sphere_radius) {  //= collision
+        let normal = normalize(vertex - sphere);
+        //take out of the sphere
         verticesData[param.x].position_x += normal.x * (data.sphere_radius - distance_to_center);
         verticesData[param.x].position_y += normal.y * (data.sphere_radius - distance_to_center);
         verticesData[param.x].position_z += normal.z * (data.sphere_radius - distance_to_center);
 
-        velocitiesData[param.x].velocity_x = 0.0;
-        velocitiesData[param.x].velocity_y = 0.0;
-        velocitiesData[param.x].velocity_z = 0.0;
+        //rebound
+        let new_vertex = 1.2 * dot(normal, vertex) * normal - vertex;
+        velocitiesData[param.x].velocity_x = new_vertex.x;
+        velocitiesData[param.x].velocity_y = new_vertex.y;
+        velocitiesData[param.x].velocity_z = new_vertex.z;
     }
 }

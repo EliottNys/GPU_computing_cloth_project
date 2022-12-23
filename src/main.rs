@@ -43,7 +43,7 @@ struct ComputeData {
 // ==================================================
 const GRAVITY: f32 = 9.81;
 //CLOTH
-const CLOTH_WIDTH: u32 = 20;
+const CLOTH_WIDTH: u32 = 25;
 const NB_CLOTH_VERTICES: u32 = CLOTH_WIDTH * CLOTH_WIDTH;
 const CLOTH_VERTEX_MASS: f32 = 0.05;
 const CLOTH_FALL_HEIGHT: f32 = 3.5;
@@ -81,6 +81,7 @@ fn create_cloth_mesh(width: u16, altitude: f32) -> (Vec<Vertex>, Vec<u16>, Vec<V
             let v2 = (z + 1) * width + x;
             let v3 = (z + 1) * width + x + 1;
             indices.extend_from_slice(&[v0, v1, v2, v1, v3, v2]);
+            indices.extend_from_slice(&[v0, v2, v1, v1, v2, v3]);
         }
     }
 
@@ -118,8 +119,8 @@ struct MyApp {
 impl MyApp {
     fn new(context: &Context) -> Self {
         let camera = Camera {
-            //eye: (1.5 * (CLOTH_WIDTH as f32), 0.0, 0.0).into(),
-            eye: (-1.5 * (CLOTH_WIDTH as f32), 0.0, 0.0).into(),
+            eye: (1.5 * (CLOTH_WIDTH as f32), 0.0, 0.0).into(),
+            //eye: (10.0, -15.0, 10.0).into(),
             target: (0.0, 0.0, 0.0).into(),
             up: cgmath::Vector3::unit_y(),
             aspect: context.get_aspect_ratio(),
@@ -167,7 +168,7 @@ impl MyApp {
             shear_stiffness: SHEAR_STIFFNESS,
             bend_stiffness: BEND_STIFFNESS,
             //collisions
-            sphere_radius: SPHERE_RADIUS,
+            sphere_radius: SPHERE_RADIUS * 1.15,
             sphere_position_x: SPHERE_POSITION_X,
             sphere_position_y: SPHERE_POSITION_Y,
             sphere_position_z: SPHERE_POSITION_Z,
@@ -307,7 +308,7 @@ impl Application for MyApp {
             shear_stiffness: SHEAR_STIFFNESS,
             bend_stiffness: BEND_STIFFNESS,
             //collisions
-            sphere_radius: SPHERE_RADIUS,
+            sphere_radius: SPHERE_RADIUS * 1.15,
             sphere_position_x: SPHERE_POSITION_X,
             sphere_position_y: SPHERE_POSITION_Y,
             sphere_position_z: SPHERE_POSITION_Z,
