@@ -16,6 +16,12 @@ use std::f64;
     
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+struct VertexVelocity {
+    velocity: [f32; 3],
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 struct ComputeData {
     delta_time: f32,
     nb_cloth_vertices: u32,
@@ -31,14 +37,23 @@ struct ComputeData {
     sphere_offset: f32,
 }
 
+// --------   PARAMETERS OF THE SIMULATION   --------
+// ==================================================
+const GRAVITY: f32 = 9.81;
+//CLOTH
 const CLOTH_WIDTH: u32 = 10;
 const NB_CLOTH_VERTICES: u32 = CLOTH_WIDTH * CLOTH_WIDTH;
 const CLOTH_VERTEX_MASS: f32 = 5.0;
 const CLOTH_FALL_HEIGHT: f32 = 3.5;
+const STRUCTURAL_STIFFNESS: f32 = 5.0;
+const SHEAR_STIFFNESS: f32 = 4.0;
+const BEND_STIFFNESS: f32 = 2.0;
+//SPHERE
 const SPHERE_RADIUS: f32 = (CLOTH_WIDTH as f32) / 8.5;
 const SPHERE_OFFSET: f32 = (CLOTH_WIDTH as f32) / 2.0;
+// ==================================================
 
-fn create_cloth_mesh(width: u16, altitude: f32) -> (Vec<Vertex>, Vec<u16>) {       //creates a cloth mesh of vertices of width x width
+fn create_cloth_mesh(width: u16, altitude: f32) -> (Vec<Vertex>, Vec<u16>, Vec<VertexVelocity>) {       //creates a cloth mesh of vertices of width x width
     let mut vertices = Vec::new();
 
     let height = width;
@@ -65,7 +80,12 @@ fn create_cloth_mesh(width: u16, altitude: f32) -> (Vec<Vertex>, Vec<u16>) {    
         }
     }
 
-    (vertices, indices)
+    let mut velocities = Vec::new();
+    for vertex in vertices.iter_mut() {
+        velocities.push(VertexVelocity {velocity: [0.0, 0.0, 0.0]})
+    }
+
+    (vertices, indices, velocities)
 }
 
 struct MyApp {
@@ -78,7 +98,11 @@ struct MyApp {
     nb_cloth_indices: usize,
     //compute
     compute_pipeline: wgpu::ComputePipeline,
+    compute_vertices_bind_group: wgpu::BindGroup,
+    compute_vertex_velocities_bind_group: wgpu::BindGroup,
+    compute_data_bind_group: wgpu::BindGroup,
     compute_data_buffer: wgpu::Buffer,
+    compute_data: ComputeData,
     //sphere
     sphere_diffuse_bind_group: wgpu::BindGroup,
     sphere_pipeline: wgpu::RenderPipeline,
@@ -102,27 +126,6 @@ impl MyApp {
 
         let (_camera_buffer, camera_bind_group) = camera.create_camera_bind_group(context);
 
-        //----- COMPUTE -----
-        let compute_pipeline = context.create_compute_pipeline("Compute Pipeline", include_str!("compute.wgsl"));
-
-
-        let compute_data = ComputeData {
-            delta_time: 0.016,
-            nb_cloth_vertices: NB_CLOTH_VERTICES,
-            //gravity
-            cloth_vertex_mass: CLOTH_VERTEX_MASS,
-            gravity: 9.81,
-            //springs
-            structural_stiffness: 5.0,
-            shear_stiffness: 4.0,
-            bend_stiffness: 2.0,
-            //collisions
-            sphere_radius: SPHERE_RADIUS,
-            sphere_offset: SPHERE_OFFSET,
-        };
-
-        let compute_data_buffer = context.create_buffer(&[compute_data], wgpu::BufferUsages::UNIFORM);
-
         //----- CLOTH -----
         let cloth_texture = context.create_srgb_texture("cloth.jpg", include_bytes!("cloth.jpg"));
         let cloth_diffuse_bind_group = create_texture_bind_group(context, &cloth_texture);
@@ -138,10 +141,65 @@ impl MyApp {
             wgpu::PrimitiveTopology::TriangleList
         );
 
-        let (cloth_vertices, cloth_indices) = create_cloth_mesh((CLOTH_WIDTH) as u16, CLOTH_FALL_HEIGHT);
+        let (cloth_vertices, cloth_indices, cloth_vertices_velocities) = create_cloth_mesh((CLOTH_WIDTH) as u16, CLOTH_FALL_HEIGHT);
 
-        let cloth_vertex_buffer = context.create_buffer(&cloth_vertices, wgpu::BufferUsages::VERTEX);
+        let cloth_vertex_buffer = context.create_buffer(&cloth_vertices, wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::STORAGE);
         let cloth_index_buffer = context.create_buffer(&cloth_indices, wgpu::BufferUsages::INDEX);
+        let cloth_vertex_velocity_buffer = context.create_buffer(&cloth_vertices_velocities, wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::STORAGE);
+
+        //----- COMPUTE -----
+        let compute_pipeline = context.create_compute_pipeline("Compute Pipeline", include_str!("compute.wgsl"));
+
+
+        let compute_data = ComputeData {
+            delta_time: 0.016,
+            nb_cloth_vertices: NB_CLOTH_VERTICES,
+            //gravity
+            cloth_vertex_mass: CLOTH_VERTEX_MASS,
+            gravity: GRAVITY,
+            //springs
+            structural_stiffness: STRUCTURAL_STIFFNESS,
+            shear_stiffness: SHEAR_STIFFNESS,
+            bend_stiffness: BEND_STIFFNESS,
+            //collisions
+            sphere_radius: SPHERE_RADIUS,
+            sphere_offset: SPHERE_OFFSET,
+        };
+
+        let compute_data_buffer = context.create_buffer(&[compute_data], wgpu::BufferUsages::UNIFORM);
+
+        let compute_vertices_bind_group = context.create_bind_group(
+            "Compute Vertices Bind Group",
+            &compute_pipeline.get_bind_group_layout(0),
+            &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: cloth_vertex_buffer.as_entire_binding(),
+                },
+            ],
+        );
+
+        let compute_vertex_velocities_bind_group = context.create_bind_group(
+            "Compute Vertices Velocities Bind Group",
+            &compute_pipeline.get_bind_group_layout(1),
+            &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: cloth_vertex_velocity_buffer.as_entire_binding(),
+                },
+            ],
+        );
+
+        let compute_data_bind_group = context.create_bind_group(
+            "Compute Data Bind Group",
+            &compute_pipeline.get_bind_group_layout(2),
+            &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: compute_data_buffer.as_entire_binding(),
+                },
+            ],
+        );
 
         //----- SPHERE -----
         let sphere_texture = context.create_srgb_texture("bowling_ball.png", include_bytes!("bowling_ball.png"));
@@ -181,7 +239,11 @@ impl MyApp {
             nb_cloth_indices: cloth_indices.len(),
             //compute
             compute_pipeline,
+            compute_vertices_bind_group,
+            compute_vertex_velocities_bind_group,
+            compute_data_bind_group,
             compute_data_buffer,
+            compute_data,
             //sphere
             sphere_diffuse_bind_group,
             sphere_pipeline,
@@ -226,29 +288,38 @@ impl Application for MyApp {
 
 
     fn update(&mut self, context: &Context, delta_time: f32) {
-        // // Update the Buffer that contains the delta_time
-        // let compute_data = ComputeData {
-        //     delta_time,
-        //     nb_vertices: 100,
-        //     vertex_mass: 0.5,
-        //     gravity: 9.81,
-        //     structural_stiffness: 5.0,
-        //     shear_stiffness: 4.0,
-        //     bend_stiffness: 2.0,
-        // }; 
-        // context.update_buffer(&self.compute_data_buffer, &[compute_data]);
+        // Update the Buffer that contains the delta_time
+        let compute_data = ComputeData {
+            delta_time,
+            nb_cloth_vertices: NB_CLOTH_VERTICES,
+            //gravity
+            cloth_vertex_mass: CLOTH_VERTEX_MASS,
+            gravity: GRAVITY,
+            //springs
+            structural_stiffness: STRUCTURAL_STIFFNESS,
+            shear_stiffness: SHEAR_STIFFNESS,
+            bend_stiffness: BEND_STIFFNESS,
+            //collisions
+            sphere_radius: SPHERE_RADIUS,
+            sphere_offset: SPHERE_OFFSET,
+        }; 
+        context.update_buffer(&self.compute_data_buffer, &[compute_data]);
 
 
-        // let mut computation = Computation::new(context);
+        let mut computation = Computation::new(context);
 
 
-        // {
-        //     let mut compute_pass = computation.begin_compute_pass();
-        //     compute_pass.set_pipeline(&self.compute_pipeline);
-        // }
+        {
+            let mut compute_pass = computation.begin_compute_pass();
 
+            compute_pass.set_pipeline(&self.compute_pipeline);
+            compute_pass.set_bind_group(0, &self.compute_vertices_bind_group, &[]);
+            compute_pass.set_bind_group(1, &self.compute_vertex_velocities_bind_group, &[]);
+            compute_pass.set_bind_group(2, &self.compute_data_bind_group, &[]);
+            compute_pass.dispatch_workgroups(((NB_CLOTH_VERTICES) as f64/64.0).ceil() as u32, 1, 1);
+        }
 
-        // computation.submit();
+        computation.submit();
     }
 }
 
