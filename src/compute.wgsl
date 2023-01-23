@@ -22,9 +22,10 @@ struct Velocity {
     velocity_z: f32,
 }
 
-struct ComputationData {
+struct ComputeData {
     delta_time: f32,
     nb_cloth_vertices: u32,
+    nb_cloth_springs: u32,
     //gravity
     cloth_vertex_mass: f32,
     gravity: f32,
@@ -41,9 +42,9 @@ struct ComputationData {
 
 @group(0) @binding(0) var<storage, read_write> verticesData: array<Vertex>;
 @group(1) @binding(0) var<storage, read_write> velocitiesData: array<Velocity>;
-@group(2) @binding(0) var<uniform> data: ComputationData;
+@group(2) @binding(0) var<uniform> data: ComputeData;
 
-@compute @workgroup_size(64, 1, 1) 
+@compute @workgroup_size(128, 1, 1)
 fn main(@builtin(global_invocation_id) param: vec3<u32>) {
     if (param.x >= u32(data.nb_cloth_vertices)) {
           return;
@@ -55,7 +56,7 @@ fn main(@builtin(global_invocation_id) param: vec3<u32>) {
     verticesData[param.x].position_z += velocitiesData[param.x].velocity_z * data.delta_time;
 
     //gravity
-    velocitiesData[param.x].velocity_y -= data.gravity * data.cloth_vertex_mass* data.delta_time;
+    //velocitiesData[param.x].velocity_y -= data.gravity * data.cloth_vertex_mass * data.delta_time;
 
     //collision with sphere
     let vertex = vec3<f32>(verticesData[param.x].position_x, verticesData[param.x].position_y, verticesData[param.x].position_z);
