@@ -64,7 +64,7 @@ const CLOTH_FALL_HEIGHT: f32 = (CLOTH_WIDTH as f32) / 3.0;
 // const BEND_STIFFNESS: f32 = 2.0;
 const STRUCTURAL_STIFFNESS: f32 = 200.0;
 const SHEAR_STIFFNESS: f32 = 140.0;
-const BEND_STIFFNESS: f32 = 60.0;
+const BEND_STIFFNESS: f32 = 70.0;
 //SPHERE
 const SPHERE_RADIUS: f32 = (CLOTH_WIDTH as f32) / 7.0;
 const SPHERE_POSITION_X: f32 = 0.0;
@@ -343,7 +343,7 @@ impl Application for MyApp {
         let mut frame = Frame::new(context)?;
 
         {
-            let mut render_pass = frame.begin_render_pass(wgpu::Color {r: 1.0, g: 1.0, b: 1.0, a: 1.0});
+            let mut render_pass = frame.begin_render_pass(wgpu::Color {r: 0.25, g: 0.25, b: 0.35, a: 1.0});
 
             //sphere
             render_pass.set_pipeline(&self.sphere_pipeline);
