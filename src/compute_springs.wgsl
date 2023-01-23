@@ -78,7 +78,7 @@ fn main(@builtin(global_invocation_id) param: vec3<u32>) {
 
     spring_force += -spring.stiffness * (distance - rest_length) * direction;
     if relative_velocity != 0.0 {
-        let damping_force = -4.0 * relative_velocity;
+        let damping_force = -8.0 * relative_velocity;
         spring_force += damping_force * velocity_direction;
     }
     let gravity_force = -data.gravity * data.cloth_vertex_mass;
